@@ -71,8 +71,8 @@ public class LogFilter extends OncePerRequestFilter {
         long endTime = System.currentTimeMillis();
         long executeTime = endTime - startTime;
         String responseContent;
-        if (response.containsHeader("Content-disposition")) {
-            responseContent = "[Steam]";
+        if (isBinaryContent(response.getContentType())) {
+            responseContent = "[ Binary Data / Image - Skipped Log ]";
         } else {
             responseContent = new String(response.getContentAsByteArray(), StandardCharsets.UTF_8);
         }
@@ -117,5 +117,16 @@ public class LogFilter extends OncePerRequestFilter {
             ip = request.getRemoteAddr();
         }
         return ip;
+    }
+
+    private boolean isBinaryContent(String contentType) {
+        if (contentType == null) {
+            return false;
+        }
+        return contentType.contains("image") ||        // 图片 (image/png, image/jpeg)
+                contentType.contains("video") ||       // 视频
+                contentType.contains("audio") ||       // 音频
+                contentType.contains("pdf") ||         // PDF
+                contentType.contains("octet-stream");  // 二进制流 (文件下载)
     }
 }
