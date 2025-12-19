@@ -50,7 +50,7 @@ jobs:
           file: Dockerfile-web
           push: true
           tags: |
-            ${{ format('ghcr.io/{0}:web_{1}', github.repository, github.event.inputs.environment) }}
+            ${{ format('ghcr.io/{0}:web_{1}', github.repository, github.event.inputs.docker_version) }}
           platforms: linux/amd64
           cache-from: type=gha
           cache-to: type=gha,mode=max
