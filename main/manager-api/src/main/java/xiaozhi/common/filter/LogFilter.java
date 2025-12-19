@@ -11,6 +11,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 import java.util.Enumeration;
 import java.util.Locale;
+import java.util.Optional;
 
 /**
  * LogFilter：LogFilter
@@ -33,6 +34,8 @@ public class LogFilter extends OncePerRequestFilter {
             filterChain.doFilter(servletRequest, servletResponse);
         } finally {
             printResponseLog(servletResponse, startTime);
+            response.getOutputStream().write(servletResponse.getStreamContent());
+            response.getOutputStream().flush();
         }
     }
 
@@ -45,7 +48,7 @@ public class LogFilter extends OncePerRequestFilter {
     }
 
     protected final void printRequestLog(ServletRequest request) {
-        String requestContent = null;
+        String requestContent = Optional.ofNullable(request.getContent()).orElse("");
         StringBuilder responseStr = new StringBuilder();
         StringBuilder header = new StringBuilder();
         boolean one = true;
@@ -75,7 +78,7 @@ public class LogFilter extends OncePerRequestFilter {
     /**
      * 打印Response Log
      */
-    protected final String printResponseLog(ServletResponse response, Long startTime) {
+    protected final void printResponseLog(ServletResponse response, Long startTime) {
         long endTime = System.currentTimeMillis();
         long executeTime = endTime - startTime;
         String responseContent;
@@ -84,7 +87,6 @@ public class LogFilter extends OncePerRequestFilter {
         } else {
             responseContent = response.getContent();
         }
-
         StringBuilder header = new StringBuilder();
         boolean one = true;
         for (String key : response.getHeaderNames()) {
@@ -106,7 +108,6 @@ public class LogFilter extends OncePerRequestFilter {
         sb.append("Response     :").append(System.lineSeparator()).append(responseContent).append(System.lineSeparator());
         sb.append("---------------------------end----------------------------------").append(System.lineSeparator());
         log.info(sb.toString());
-        return responseContent;
     }
 
     public static String getClientIpAddr(HttpServletRequest request) {
