@@ -5,13 +5,13 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
+import org.springframework.web.util.ContentCachingRequestWrapper;
+import org.springframework.web.util.ContentCachingResponseWrapper;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.Enumeration;
-import java.util.Locale;
-import java.util.Optional;
 
 /**
  * LogFilter：LogFilter
@@ -24,31 +24,20 @@ public class LogFilter extends OncePerRequestFilter {
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws IOException, ServletException {
-        boolean isUpload = isUploadFile(request);
-        ServletRequest servletRequest = new ServletRequest(request, isUpload);
-        ServletResponse servletResponse = new ServletResponse(response);
+        ContentCachingRequestWrapper requestWrapper = new ContentCachingRequestWrapper(request);
+        ContentCachingResponseWrapper responseWrapper = new ContentCachingResponseWrapper(response);
         // 记录开始时间
         long startTime = System.currentTimeMillis();
-        printRequestLog(servletRequest);
+        printRequestLog(requestWrapper);
         try {
-            filterChain.doFilter(servletRequest, servletResponse);
+            filterChain.doFilter(requestWrapper, responseWrapper);
         } finally {
-            printResponseLog(servletResponse, startTime);
-            response.getOutputStream().write(servletResponse.getStreamContent());
-            response.getOutputStream().flush();
+            printResponseLog(responseWrapper, startTime);
         }
     }
 
-    public boolean isUploadFile(HttpServletRequest request) {
-        String contentType = request.getHeader("Content-type");
-        if (StringUtils.isBlank(contentType)) {
-            return false;
-        }
-        return contentType.toLowerCase(Locale.ENGLISH).startsWith("multipart/");
-    }
-
-    protected final void printRequestLog(ServletRequest request) {
-        String requestContent = Optional.ofNullable(request.getContent()).orElse("");
+    protected final void printRequestLog(ContentCachingRequestWrapper request) {
+        String requestContent = new String(request.getContentAsByteArray(), StandardCharsets.UTF_8);
         StringBuilder responseStr = new StringBuilder();
         StringBuilder header = new StringBuilder();
         boolean one = true;
@@ -59,7 +48,7 @@ public class LogFilter extends OncePerRequestFilter {
             if (one) {
                 one = false;
             } else {
-                header.append(System.lineSeparator()).append("\t\t\t  ");
+                header.append(System.lineSeparator()).append("\t\t");
             }
             header.append(key).append("=").append(value).append("; ");
         }
@@ -78,14 +67,14 @@ public class LogFilter extends OncePerRequestFilter {
     /**
      * 打印Response Log
      */
-    protected final void printResponseLog(ServletResponse response, Long startTime) {
+    protected final void printResponseLog(ContentCachingResponseWrapper response, Long startTime) {
         long endTime = System.currentTimeMillis();
         long executeTime = endTime - startTime;
         String responseContent;
         if (response.containsHeader("Content-disposition")) {
             responseContent = "[Steam]";
         } else {
-            responseContent = response.getContent();
+            responseContent = new String(response.getContentAsByteArray(), StandardCharsets.UTF_8);
         }
         StringBuilder header = new StringBuilder();
         boolean one = true;
@@ -94,7 +83,7 @@ public class LogFilter extends OncePerRequestFilter {
             if (one) {
                 one = false;
             } else {
-                header.append(System.lineSeparator()).append("\t\t\t  ");
+                header.append(System.lineSeparator()).append("\t\t");
             }
             header.append(key).append("=").append(value).append("; ");
         }
