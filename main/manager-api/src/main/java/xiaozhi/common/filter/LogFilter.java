@@ -24,6 +24,10 @@ public class LogFilter extends OncePerRequestFilter {
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws IOException, ServletException {
+        if (isBinaryContent(request.getContentType())) {
+            filterChain.doFilter(request, response);
+            return;
+        }
         ContentCachingRequestWrapper requestWrapper = new ContentCachingRequestWrapper(request);
         ContentCachingResponseWrapper responseWrapper = new ContentCachingResponseWrapper(response);
         // 记录开始时间
